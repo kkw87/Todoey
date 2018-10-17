@@ -10,12 +10,15 @@ import UIKit
 
 class ToDoListTableViewController: UITableViewController {
     
+    //MARK: - Constants
     struct Storyboard {
         static let CellReuseID = "ToDoItemCell"
     }
     
-    let itemArray = ["a", "b", "c"]
+    //MARK: - Instance variables
+    private var itemArray = ["a", "b", "c"]
 
+    //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -26,6 +29,26 @@ class ToDoListTableViewController: UITableViewController {
         // self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
 
+    //MARK: - Outlet Actions
+    
+    @IBAction func addActivity(_ sender: Any) {
+        let addItemAlertController = UIAlertController(title: "Add Activity", message: "", preferredStyle: .alert)
+        
+        addItemAlertController.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create new item"
+        }
+        addItemAlertController.addAction(UIAlertAction(title: "Add Item", style: .default, handler: { (action) in
+            
+            if let itemName = addItemAlertController.textFields?.first?.text {
+                self.itemArray.append(itemName)
+                self.tableView.reloadData()
+            }
+            
+        }))
+        addItemAlertController.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        present(addItemAlertController, animated: true, completion: nil)
+    }
+    
     // MARK: - Table view data source
 
     override func numberOfSections(in tableView: UITableView) -> Int {
