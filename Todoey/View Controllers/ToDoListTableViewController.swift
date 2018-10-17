@@ -15,12 +15,21 @@ class ToDoListTableViewController: UITableViewController {
         static let CellReuseID = "ToDoItemCell"
     }
     
+    struct Constants {
+        static let Defaults = UserDefaults.standard
+        static let ListArrayKey = "ToDoList Key"
+    }
+    
     //MARK: - Instance variables
     private var itemArray = ["a", "b", "c"]
 
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if let savedValues = Constants.Defaults.value(forKey: Constants.ListArrayKey) as? [String] {
+            itemArray = savedValues
+        }
 
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
@@ -41,6 +50,7 @@ class ToDoListTableViewController: UITableViewController {
             
             if let itemName = addItemAlertController.textFields?.first?.text {
                 self.itemArray.append(itemName)
+                Constants.Defaults.setValue(self.itemArray, forKey: Constants.ListArrayKey)
                 self.tableView.reloadData()
             }
             
