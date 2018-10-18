@@ -16,18 +16,21 @@ class ToDoListTableViewController: UITableViewController {
     }
     
     struct Constants {
-        static let Defaults = UserDefaults.standard
-        static let ListArrayKey = "ToDoList Key"
+        static let ListArrayKey = "ToDoList.plist"
     }
     
     //MARK: - Instance variables
     private var itemArray : [ToDoItem] = []
+    private var dataFilePath : URL {
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent(Constants.ListArrayKey)
+    }
+    private let encoder = PropertyListEncoder()
 
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         
-
+        loadItems()
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
@@ -48,6 +51,7 @@ class ToDoListTableViewController: UITableViewController {
             if let itemName = addItemAlertController.textFields?.first?.text {
                 let newItem = ToDoItem(activityName: itemName)
                 self.itemArray.append(newItem)
+                self.saveItem(itemToSave: self.itemArray)
                 self.tableView.reloadData()
             }
             
@@ -89,8 +93,11 @@ class ToDoListTableViewController: UITableViewController {
         let toDoItemAtLocation = itemArray[indexPath.row]
 
         toDoItemAtLocation.completed = !toDoItemAtLocation.completed
+        
+        saveItem(itemToSave: itemArray)
 
         tableView.deselectRow(at: indexPath, animated: true)
+        
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
 
@@ -103,5 +110,29 @@ class ToDoListTableViewController: UITableViewController {
         // Pass the selected object to the new view controller.
     }
     */
+    
+    private func saveItem<Value : Encodable>(itemToSave : Value) {
+        
+        do {
+            let data = try encoder.encode(itemToSave)
+            try data.write(to: dataFilePath)
+        } catch {
+            print("Error saving data locally : \(error.localizedDescription)")
+        }
+        
+    }
 
+    private func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath) {
+            
+            let decoder = PropertyListDecoder()
+            
+            do {
+            itemArray = try decoder.decode([ToDoItem].self, from: data)
+            } catch {
+                print("Error loading items : \(error.localizedDescription)")
+            }
+            
+        }
+    }
 }

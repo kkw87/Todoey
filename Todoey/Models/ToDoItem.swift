@@ -8,7 +8,7 @@
 
 import Foundation
 
-class ToDoItem {
+class ToDoItem : Codable {
     
     var activityName : String
     var completed = false
