@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListTableViewController: UITableViewController {
     
@@ -17,27 +18,37 @@ class ToDoListTableViewController: UITableViewController {
     
     struct Constants {
         static let ListArrayKey = "ToDoList.plist"
+        
+    }
+    
+    struct CoreDataConstants {
+        static let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     }
     
     //MARK: - Instance variables
     private var itemArray : [ToDoItem] = []
-    private var dataFilePath : URL {
-        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent(Constants.ListArrayKey)
+    var currentCategory : Category? {
+        didSet {
+            navigationItem.title = currentCategory!.name
+            loadItems()
+        }
     }
-    private let encoder = PropertyListEncoder()
-
+    
+    //MARK: - Outlets
+    @IBOutlet weak var searchBar: UISearchBar! {
+        didSet {
+            searchBar.delegate = self
+        }
+    }
+    
+    
+    
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        loadItems()
-        // Uncomment the following line to preserve selection between presentations
-        // self.clearsSelectionOnViewWillAppear = false
 
-        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-        // self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
-
+    
     //MARK: - Outlet Actions
     
     @IBAction func addActivity(_ sender: Any) {
@@ -49,9 +60,13 @@ class ToDoListTableViewController: UITableViewController {
         addItemAlertController.addAction(UIAlertAction(title: "Add Item", style: .default, handler: { (action) in
             
             if let itemName = addItemAlertController.textFields?.first?.text {
-                let newItem = ToDoItem(activityName: itemName)
+                
+                let newItem = ToDoItem(context: CoreDataConstants.context)
+                newItem.activityName = itemName
+                newItem.completed = false
+                newItem.category = self.currentCategory!
                 self.itemArray.append(newItem)
-                self.saveItem(itemToSave: self.itemArray)
+                self.saveItems()
                 self.tableView.reloadData()
             }
             
@@ -61,22 +76,22 @@ class ToDoListTableViewController: UITableViewController {
     }
     
     // MARK: - Table view data source
-
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         // #warning Incomplete implementation, return the number of sections
         return 1
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
         return itemArray.count
     }
-
+    
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellReuseID, for: indexPath)
-
+        
         let toDoItemAtLocation = itemArray[indexPath.row]
         
         cell.textLabel?.text = toDoItemAtLocation.activityName
@@ -85,54 +100,99 @@ class ToDoListTableViewController: UITableViewController {
         
         return cell
     }
- 
+    
     //MARK: - Table view delegates
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         let toDoItemAtLocation = itemArray[indexPath.row]
-
+        
         toDoItemAtLocation.completed = !toDoItemAtLocation.completed
         
-        saveItem(itemToSave: itemArray)
-
+        saveItems()
+        
         tableView.deselectRow(at: indexPath, animated: true)
         
         tableView.reloadRows(at: [indexPath], with: .automatic)
     }
-
-    // MARK: - Navigation
-
-    /*
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
     
-    private func saveItem<Value : Encodable>(itemToSave : Value) {
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            CoreDataConstants.context.delete(itemArray[indexPath.row])
+            _ = itemArray.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+            saveItems()
+        }
+    }
+    
+    // MARK: - Navigation
+    
+    /*
+     // In a storyboard-based application, you will often want to do a little preparation before navigation
+     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+     // Get the new view controller using segue.destination.
+     // Pass the selected object to the new view controller.
+     }
+     */
+    
+    private func saveItems() {
         
         do {
-            let data = try encoder.encode(itemToSave)
-            try data.write(to: dataFilePath)
+            try CoreDataConstants.context.save()
         } catch {
-            print("Error saving data locally : \(error.localizedDescription)")
+            print("Error data locally : \(error.localizedDescription)")
         }
         
     }
+    
+    private func loadItems(with request : NSFetchRequest<ToDoItem> = ToDoItem.fetchRequest(), withPredicate predicate : NSPredicate? = nil) {
 
-    private func loadItems() {
-        if let data = try? Data(contentsOf: dataFilePath) {
+        let categoryPredicate = NSPredicate(format: "category == %@", currentCategory!)
+        
+        if let userPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, userPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
+        
+        
+        do {
+            itemArray = try CoreDataConstants.context.fetch(request)
+            tableView.reloadData()
+        } catch {
+            print("Error fetchign data : \(error)")
+        }
+    }
+}
+
+//MARK: - Search Bar Delegates
+extension ToDoListTableViewController : UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        guard let searchText = searchBar.text else {
+            return
+        }
+        
+        let fetchRequest : NSFetchRequest<ToDoItem> = ToDoItem.fetchRequest()
+        
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "activityName", ascending: true)]
+                
+       loadItems(withPredicate: NSPredicate(format: "activityName CONTAINS[cd] %@", searchText))
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        
+        if searchText.count == 0 {
+
+            loadItems()
             
-            let decoder = PropertyListDecoder()
-            
-            do {
-            itemArray = try decoder.decode([ToDoItem].self, from: data)
-            } catch {
-                print("Error loading items : \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
             }
-            
         }
     }
 }

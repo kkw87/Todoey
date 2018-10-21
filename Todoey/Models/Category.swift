@@ -1,5 +1,5 @@
 //
-//  ToDoItem.swift
+//  Category.swift
 //  Todoey
 //
 //  Created by Kevin Wang on 10/18/18.
@@ -9,6 +9,6 @@
 import UIKit
 import CoreData
 
-class ToDoItem: NSManagedObject {
+class Category: NSManagedObject {
 
 }
