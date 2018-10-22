@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ToDoListTableViewController: UITableViewController {
     
@@ -20,19 +20,22 @@ class ToDoListTableViewController: UITableViewController {
         static let ListArrayKey = "ToDoList.plist"
         
     }
-    
-    struct CoreDataConstants {
-        static let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    }
-    
+//
+//    struct CoreDataConstants {
+//        static let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+//    }
+//
     //MARK: - Instance variables
-    private var itemArray : [ToDoItem] = []
+    private var itemArray : Results<ToDoItem>?
+    
     var currentCategory : Category? {
         didSet {
             navigationItem.title = currentCategory!.name
-            loadItems()
+            loadItems(withPredicate: nil)
         }
     }
+    
+    private let realmDatabase = try! Realm()
     
     //MARK: - Outlets
     @IBOutlet weak var searchBar: UISearchBar! {
@@ -61,12 +64,11 @@ class ToDoListTableViewController: UITableViewController {
             
             if let itemName = addItemAlertController.textFields?.first?.text {
                 
-                let newItem = ToDoItem(context: CoreDataConstants.context)
+                
+                let newItem = ToDoItem()
                 newItem.activityName = itemName
                 newItem.completed = false
-                newItem.category = self.currentCategory!
-                self.itemArray.append(newItem)
-                self.saveItems()
+                self.saveToRealm(objectToSave: newItem)
                 self.tableView.reloadData()
             }
             
@@ -84,7 +86,7 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return itemArray.count
+        return itemArray?.count ?? 1
     }
     
     
@@ -92,11 +94,16 @@ class ToDoListTableViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellReuseID, for: indexPath)
         
-        let toDoItemAtLocation = itemArray[indexPath.row]
+        let toDoItemAtLocation = itemArray?[indexPath.row]
         
-        cell.textLabel?.text = toDoItemAtLocation.activityName
+        cell.textLabel?.text = toDoItemAtLocation?.activityName ?? "Add activities"
         
-        cell.accessoryType = toDoItemAtLocation.completed ? .checkmark : .none
+        
+        if toDoItemAtLocation != nil {
+        cell.accessoryType = toDoItemAtLocation!.completed ? .checkmark : .none
+        } else {
+            cell.accessoryType = .none
+        }
         
         return cell
     }
@@ -105,27 +112,36 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        let toDoItemAtLocation = itemArray[indexPath.row]
-        
-        toDoItemAtLocation.completed = !toDoItemAtLocation.completed
-        
-        saveItems()
+        if let toDoItemAtLocation = itemArray?[indexPath.row] {
+            
+        try! realmDatabase.write {
+            toDoItemAtLocation.completed = !toDoItemAtLocation.completed
+        }
         
         tableView.deselectRow(at: indexPath, animated: true)
         
         tableView.reloadRows(at: [indexPath], with: .automatic)
+        }
     }
     
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        return true
+        
+        if itemArray != nil {
+            return true
+        } else {
+            return false
+        }
+
     }
     
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            CoreDataConstants.context.delete(itemArray[indexPath.row])
-            _ = itemArray.remove(at: indexPath.row)
+            
+            try! realmDatabase.write {
+                realmDatabase.delete(itemArray![indexPath.row])
+
+            }
             tableView.deleteRows(at: [indexPath], with: .automatic)
-            saveItems()
         }
     }
     
@@ -139,33 +155,30 @@ class ToDoListTableViewController: UITableViewController {
      }
      */
     
-    private func saveItems() {
+    private func saveToRealm(objectToSave : ToDoItem) {
         
         do {
-            try CoreDataConstants.context.save()
+            try realmDatabase.write {
+                realmDatabase.add(objectToSave)
+                currentCategory!.items.append(objectToSave)
+            }
         } catch {
             print("Error data locally : \(error.localizedDescription)")
         }
         
     }
     
-    private func loadItems(with request : NSFetchRequest<ToDoItem> = ToDoItem.fetchRequest(), withPredicate predicate : NSPredicate? = nil) {
+    private func loadItems(withPredicate predicate : NSPredicate?) {
 
-        let categoryPredicate = NSPredicate(format: "category == %@", currentCategory!)
-        
         if let userPredicate = predicate {
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, userPredicate])
+            itemArray = currentCategory?.items.sorted(byKeyPath: "activityName", ascending: true).filter(userPredicate)
+
         } else {
-            request.predicate = categoryPredicate
+            itemArray = currentCategory?.items.sorted(byKeyPath: "activityName", ascending: true)
+
         }
         
-        
-        do {
-            itemArray = try CoreDataConstants.context.fetch(request)
-            tableView.reloadData()
-        } catch {
-            print("Error fetchign data : \(error)")
-        }
+        tableView.reloadData()
     }
 }
 
@@ -177,10 +190,7 @@ extension ToDoListTableViewController : UISearchBarDelegate {
             return
         }
         
-        let fetchRequest : NSFetchRequest<ToDoItem> = ToDoItem.fetchRequest()
         
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "activityName", ascending: true)]
-                
        loadItems(withPredicate: NSPredicate(format: "activityName CONTAINS[cd] %@", searchText))
     }
     
@@ -188,7 +198,7 @@ extension ToDoListTableViewController : UISearchBarDelegate {
         
         if searchText.count == 0 {
 
-            loadItems()
+            loadItems(withPredicate: nil)
             
             DispatchQueue.main.async {
                 searchBar.resignFirstResponder()

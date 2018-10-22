@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
     
@@ -16,14 +16,7 @@ class CategoryTableViewController: UITableViewController {
         static let ItemSegueID = "goToItem"
         static let CellID = "categoryCell"
     }
-    
-    struct Constants {
-        
-    }
-    
-    struct CoreDataConstants {
-        static let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    }
+
     
     //MARK: - Outlets
     
@@ -34,7 +27,8 @@ class CategoryTableViewController: UITableViewController {
     }
     
     //MARK: - Instance Variables
-    private var currentCategories : [Category] = []
+    private var currentCategories : Results<Category>?
+    private var realmDatabase = try! Realm()
 
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
@@ -62,11 +56,11 @@ class CategoryTableViewController: UITableViewController {
             
             if let categoryName = currentTextField.text, categoryName.count > 0 {
                 
-                let newCategory = Category(context: CoreDataConstants.context)
+                
+                let newCategory = Category()
                 newCategory.name = categoryName
                 
-                self.saveCategory()
-                self.currentCategories.append(newCategory)
+                self.saveToRealm(objectToSave: newCategory)
                 self.tableView.reloadData()
                 
             } else {
@@ -89,16 +83,16 @@ class CategoryTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return currentCategories.count
+        return currentCategories?.count ?? 1
     }
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellID, for: indexPath)
 
-        let categoryAtIndexPath = currentCategories[indexPath.row]
+        let categoryAtIndexPath = currentCategories?[indexPath.row]
         
-        cell.textLabel?.text = categoryAtIndexPath.name
+        cell.textLabel?.text = categoryAtIndexPath?.name ?? "No Categories"
         return cell
     }
     
@@ -111,7 +105,7 @@ class CategoryTableViewController: UITableViewController {
             return
         }
         
-        let currentCategory = currentCategories[currentIndexPath.row]
+        let currentCategory = currentCategories?[currentIndexPath.row]
         
         let segueIdentifier = segue.identifier
         
@@ -127,24 +121,19 @@ class CategoryTableViewController: UITableViewController {
     
     // MARK: - Core Data loading functions
     
-    private func loadCategories(with request : NSFetchRequest<Category> = Category.fetchRequest()) {
+    private func loadCategories() {
         
-        do {
-            request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-            let savedCategories = try CoreDataConstants.context.fetch(request)
-            currentCategories = savedCategories
-            tableView.reloadData()
-            
-        } catch {
-            print("Error loading itmes : \(error.localizedDescription)")
-        }
-        
+        currentCategories = realmDatabase.objects(Category.self)
+ 
+        tableView.reloadData()
     }
     
-    private func saveCategory() {
+    private func saveToRealm(objectToSave : Object) {
         
         do {
-            try CoreDataConstants.context.save()
+            try realmDatabase.write {
+                realmDatabase.add(objectToSave)
+            }
         } catch {
             print("Error saving items : \(error.localizedDescription)")
         }
@@ -162,6 +151,7 @@ extension CategoryTableViewController : UITextFieldDelegate {
 
 //MARK: - Search bar delegates 
 extension CategoryTableViewController : UISearchBarDelegate {
+    
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         
         guard let searchText = searchBar.text else {
@@ -170,9 +160,8 @@ extension CategoryTableViewController : UISearchBarDelegate {
         
         if searchText.count > 0 {
             
-            let fetchRequest : NSFetchRequest<Category> = Category.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "name CONTAINS[cd] %@", searchText)
-            loadCategories(with: fetchRequest)
+            currentCategories = realmDatabase.objects(Category.self).filter("name CONTAINS[cd] %@", searchText)
+            self.tableView.reloadData()
         }
         
     }

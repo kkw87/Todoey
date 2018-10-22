@@ -1,14 +1,18 @@
 //
-//  Category.swift
+//  RealmCategory.swift
 //  Todoey
 //
-//  Created by Kevin Wang on 10/18/18.
+//  Created by Kevin Wang on 10/21/18.
 //  Copyright © 2018 Kevin Wang. All rights reserved.
 //
 
-import UIKit
-import CoreData
+import Foundation
+import RealmSwift
 
-class Category: NSManagedObject {
+class Category : Object {
+    
+    @objc dynamic var name : String = ""
+    let items = List<ToDoItem>()
+    
 
 }

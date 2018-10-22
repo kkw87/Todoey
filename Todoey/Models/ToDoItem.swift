@@ -1,14 +1,17 @@
 //
-//  ToDoItem.swift
+//  RealmToDoItem.swift
 //  Todoey
 //
-//  Created by Kevin Wang on 10/18/18.
+//  Created by Kevin Wang on 10/21/18.
 //  Copyright © 2018 Kevin Wang. All rights reserved.
 //
 
-import UIKit
-import CoreData
+import Foundation
+import RealmSwift
 
-class ToDoItem: NSManagedObject {
-
+class ToDoItem : Object {
+    @objc dynamic var activityName : String = ""
+    @objc dynamic var completed : Bool = false
+    
+    var category = LinkingObjects(fromType: Category.self, property: "items")
 }
