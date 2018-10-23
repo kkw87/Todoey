@@ -26,7 +26,7 @@ class ToDoListTableViewController: UITableViewController {
 //    }
 //
     //MARK: - Instance variables
-    private var itemArray : Results<ToDoItem>?
+    private var items : Results<ToDoItem>?
     
     var currentCategory : Category? {
         didSet {
@@ -86,7 +86,7 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return itemArray?.count ?? 1
+        return items?.count ?? 1
     }
     
     
@@ -94,7 +94,7 @@ class ToDoListTableViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellReuseID, for: indexPath)
         
-        let toDoItemAtLocation = itemArray?[indexPath.row]
+        let toDoItemAtLocation = items?[indexPath.row]
         
         cell.textLabel?.text = toDoItemAtLocation?.activityName ?? "Add activities"
         
@@ -112,7 +112,7 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        if let toDoItemAtLocation = itemArray?[indexPath.row] {
+        if let toDoItemAtLocation = items?[indexPath.row] {
             
         try! realmDatabase.write {
             toDoItemAtLocation.completed = !toDoItemAtLocation.completed
@@ -126,7 +126,7 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         
-        if itemArray != nil {
+        if items != nil {
             return true
         } else {
             return false
@@ -138,7 +138,7 @@ class ToDoListTableViewController: UITableViewController {
         if editingStyle == .delete {
             
             try! realmDatabase.write {
-                realmDatabase.delete(itemArray![indexPath.row])
+                realmDatabase.delete(items![indexPath.row])
 
             }
             tableView.deleteRows(at: [indexPath], with: .automatic)
@@ -171,10 +171,10 @@ class ToDoListTableViewController: UITableViewController {
     private func loadItems(withPredicate predicate : NSPredicate?) {
 
         if let userPredicate = predicate {
-            itemArray = currentCategory?.items.sorted(byKeyPath: "activityName", ascending: true).filter(userPredicate)
+            items = currentCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true).filter(userPredicate)
 
         } else {
-            itemArray = currentCategory?.items.sorted(byKeyPath: "activityName", ascending: true)
+            items = currentCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true)
 
         }
         

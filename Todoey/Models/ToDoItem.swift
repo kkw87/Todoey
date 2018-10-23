@@ -12,6 +12,7 @@ import RealmSwift
 class ToDoItem : Object {
     @objc dynamic var activityName : String = ""
     @objc dynamic var completed : Bool = false
+    @objc dynamic var dateCreated = Date()
     
     var category = LinkingObjects(fromType: Category.self, property: "items")
 }
