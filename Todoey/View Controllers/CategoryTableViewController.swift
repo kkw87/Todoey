@@ -9,12 +9,11 @@
 import UIKit
 import RealmSwift
 
-class CategoryTableViewController: UITableViewController {
+class CategoryTableViewController: SwipeTableViewController {
     
     //MARK: - Constants
     struct Storyboard {
         static let ItemSegueID = "goToItem"
-        static let CellID = "categoryCell"
     }
 
     
@@ -33,7 +32,6 @@ class CategoryTableViewController: UITableViewController {
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         loadCategories()
    
     }
@@ -88,13 +86,16 @@ class CategoryTableViewController: UITableViewController {
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellID, for: indexPath)
-
+        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         let categoryAtIndexPath = currentCategories?[indexPath.row]
         
         cell.textLabel?.text = categoryAtIndexPath?.name ?? "No Categories"
         return cell
     }
+    
+    
     
     // MARK: - Navigation
 
@@ -119,7 +120,7 @@ class CategoryTableViewController: UITableViewController {
         }
     }
     
-    // MARK: - Core Data loading functions
+    // MARK: - Data manipulation functions
     
     private func loadCategories() {
         
@@ -138,6 +139,17 @@ class CategoryTableViewController: UITableViewController {
             print("Error saving items : \(error.localizedDescription)")
         }
         
+    }
+    
+    //MARK: - Delete data from swipe
+    override func updateModel(at indexPath : IndexPath) {
+                    if let currentItem = currentCategories?[indexPath.row] {
+        
+                        try! self.realmDatabase.write {
+                            self.realmDatabase.delete(currentItem)
+                        }
+        
+                    }
     }
 
 }

@@ -9,13 +9,9 @@
 import UIKit
 import RealmSwift
 
-class ToDoListTableViewController: UITableViewController {
+class ToDoListTableViewController: SwipeTableViewController {
     
     //MARK: - Constants
-    struct Storyboard {
-        static let CellReuseID = "ToDoItemCell"
-    }
-    
     struct Constants {
         static let ListArrayKey = "ToDoList.plist"
         
@@ -49,7 +45,6 @@ class ToDoListTableViewController: UITableViewController {
     //MARK: - VC Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-
     }
     
     //MARK: - Outlet Actions
@@ -92,7 +87,7 @@ class ToDoListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellReuseID, for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         let toDoItemAtLocation = items?[indexPath.row]
         
@@ -122,28 +117,29 @@ class ToDoListTableViewController: UITableViewController {
         
         tableView.reloadRows(at: [indexPath], with: .automatic)
         }
-    }
-    
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        
-        if items != nil {
-            return true
-        } else {
-            return false
         }
-
-    }
     
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            
-            try! realmDatabase.write {
-                realmDatabase.delete(items![indexPath.row])
-
-            }
-            tableView.deleteRows(at: [indexPath], with: .automatic)
-        }
-    }
+    //Built in swipe to delete function, remove swipeKit to use this
+//    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+//
+//        if items != nil {
+//            return true
+//        } else {
+//            return false
+//        }
+//
+//    }
+//
+//    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+//        if editingStyle == .delete {
+//
+//            try! realmDatabase.write {
+//                realmDatabase.delete(items![indexPath.row])
+//
+//            }
+//            tableView.deleteRows(at: [indexPath], with: .automatic)
+//        }
+//    }
     
     // MARK: - Navigation
     
@@ -155,6 +151,7 @@ class ToDoListTableViewController: UITableViewController {
      }
      */
     
+    //MARK: - Data manipulation functions
     private func saveToRealm(objectToSave : ToDoItem) {
         
         do {
@@ -179,6 +176,17 @@ class ToDoListTableViewController: UITableViewController {
         }
         
         tableView.reloadData()
+    }
+    
+    //MARK: - Delete data from swipe
+    override func updateModel(at indexPath: IndexPath) {
+                    if let currentItem = self.items?[indexPath.row] {
+        
+                        try! self.realmDatabase.write {
+                            self.realmDatabase.delete(currentItem)
+                        }
+        
+                    }
     }
 }
 
