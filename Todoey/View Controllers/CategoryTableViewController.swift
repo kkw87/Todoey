@@ -8,12 +8,14 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class CategoryTableViewController: SwipeTableViewController {
     
     //MARK: - Constants
     struct Storyboard {
         static let ItemSegueID = "goToItem"
+        static let DefaultCellColor = "76D6FF"
     }
 
     
@@ -36,7 +38,14 @@ class CategoryTableViewController: SwipeTableViewController {
    
     }
     
-    //MARK: - Outlet actions
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if let backgroundColor = UIColor(hexString: Storyboard.DefaultCellColor) {
+            searchBar.barTintColor = backgroundColor
+        }
+    }
+    
+    //MARK: - Create new category
 
     @IBAction func addNewCategory(_ sender: Any) {
         //Add new category
@@ -57,6 +66,7 @@ class CategoryTableViewController: SwipeTableViewController {
                 
                 let newCategory = Category()
                 newCategory.name = categoryName
+                newCategory.color = UIColor.randomFlat.hexValue()
                 
                 self.saveToRealm(objectToSave: newCategory)
                 self.tableView.reloadData()
@@ -92,6 +102,11 @@ class CategoryTableViewController: SwipeTableViewController {
         let categoryAtIndexPath = currentCategories?[indexPath.row]
         
         cell.textLabel?.text = categoryAtIndexPath?.name ?? "No Categories"
+        
+        let cellBackgroundColor = UIColor(hexString: categoryAtIndexPath?.color ?? Storyboard.DefaultCellColor)
+        
+        cell.backgroundColor = cellBackgroundColor
+        cell.textLabel?.textColor = UIColor.init(contrastingBlackOrWhiteColorOn: cellBackgroundColor!, isFlat: true)
         return cell
     }
     

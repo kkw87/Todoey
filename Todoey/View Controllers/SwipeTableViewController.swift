@@ -23,6 +23,7 @@ class SwipeTableViewController: UITableViewController, SwipeTableViewCellDelegat
         super.viewDidLoad()
 
         tableView.rowHeight = Constants.CellHeight
+        tableView.separatorStyle = .none
     }
     
     //MARK: - Tableview Datasource
@@ -31,7 +32,7 @@ class SwipeTableViewController: UITableViewController, SwipeTableViewCellDelegat
         let cell = tableView.dequeueReusableCell(withIdentifier: Storyboard.CellID, for: indexPath) as! SwipeTableViewCell
         
         cell.delegate = self
-        
+                
         return cell
     }
 

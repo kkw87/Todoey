@@ -8,13 +8,17 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class ToDoListTableViewController: SwipeTableViewController {
     
     //MARK: - Constants
     struct Constants {
         static let ListArrayKey = "ToDoList.plist"
-        
+    }
+    
+    struct Storyboard {
+        static let DefaultCellColor = "76D6FF"
     }
 //
 //    struct CoreDataConstants {
@@ -47,7 +51,35 @@ class ToDoListTableViewController: SwipeTableViewController {
         super.viewDidLoad()
     }
     
-    //MARK: - Outlet Actions
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        updateNavigationBar(withColorCodeHex: currentCategory!.color)
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        updateNavigationBar(withColorCodeHex: Storyboard.DefaultCellColor)
+    }
+    
+    //MARK: - Navigation bar update
+    func updateNavigationBar(withColorCodeHex hex : String) {
+        
+        guard let navBar = navigationController?.navigationBar else { return }
+        guard let backgroundColor = UIColor(hexString: hex) else { return }
+        
+        let contrastingColor = UIColor.init(contrastingBlackOrWhiteColorOn: backgroundColor, isFlat: true)
+        
+        navBar.barTintColor = backgroundColor
+        navBar.tintColor = contrastingColor
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor : contrastingColor]
+        searchBar.barTintColor = backgroundColor
+        
+    }
+    
+    //MARK: - Create to do item
     
     @IBAction func addActivity(_ sender: Any) {
         let addItemAlertController = UIAlertController(title: "Add Activity", message: "", preferredStyle: .alert)
@@ -63,6 +95,7 @@ class ToDoListTableViewController: SwipeTableViewController {
                 let newItem = ToDoItem()
                 newItem.activityName = itemName
                 newItem.completed = false
+                
                 self.saveToRealm(objectToSave: newItem)
                 self.tableView.reloadData()
             }
@@ -93,6 +126,10 @@ class ToDoListTableViewController: SwipeTableViewController {
         
         cell.textLabel?.text = toDoItemAtLocation?.activityName ?? "Add activities"
         
+        if let cellBackgroundColor = UIColor(hexString: currentCategory!.color)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(items!.count)) {
+            cell.textLabel?.textColor = UIColor.init(contrastingBlackOrWhiteColorOn: cellBackgroundColor, isFlat: true)
+            cell.backgroundColor = cellBackgroundColor
+        }
         
         if toDoItemAtLocation != nil {
         cell.accessoryType = toDoItemAtLocation!.completed ? .checkmark : .none
@@ -197,8 +234,7 @@ extension ToDoListTableViewController : UISearchBarDelegate {
         guard let searchText = searchBar.text else {
             return
         }
-        
-        
+                
        loadItems(withPredicate: NSPredicate(format: "activityName CONTAINS[cd] %@", searchText))
     }
     
